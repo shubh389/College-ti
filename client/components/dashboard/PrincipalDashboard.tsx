@@ -46,16 +46,24 @@ function formatDate(d: Date) {
 }
 function generateAttendance(days = 14): AttendanceRecord[] {
   const today = new Date();
-  return Array.from({ length: days }).map((_, i) => {
-    const d = new Date(today);
-    d.setDate(today.getDate() - i);
-    const r = (i * 17 + 7) % 10;
-    const status: AttendanceRecord["status"] = r < 7 ? "Present" : r < 9 ? "Absent" : "On Leave";
-    return { date: formatDate(d), status };
-  }).reverse();
+  return Array.from({ length: days })
+    .map((_, i) => {
+      const d = new Date(today);
+      d.setDate(today.getDate() - i);
+      const r = (i * 17 + 7) % 10;
+      const status: AttendanceRecord["status"] =
+        r < 7 ? "Present" : r < 9 ? "Absent" : "On Leave";
+      return { date: formatDate(d), status };
+    })
+    .reverse();
 }
 
-function buildAttendanceFromCounts(present: number, absent: number, leave: number, windowDays = 14): AttendanceRecord[] {
+function buildAttendanceFromCounts(
+  present: number,
+  absent: number,
+  leave: number,
+  windowDays = 14,
+): AttendanceRecord[] {
   const total = present + absent + leave;
   const scale = total > 0 ? windowDays / total : 1;
   const p = Math.round(present * scale);
@@ -66,14 +74,24 @@ function buildAttendanceFromCounts(present: number, absent: number, leave: numbe
   for (let i = 0; i < a; i++) arr.push({ date: "", status: "Absent" });
   for (let i = 0; i < l; i++) arr.push({ date: "", status: "On Leave" });
   const today = new Date();
-  return arr.map((rec, idx) => ({ date: formatDate(new Date(today.getFullYear(), today.getMonth(), today.getDate() - (arr.length - 1 - idx))), status: rec.status }));
+  return arr.map((rec, idx) => ({
+    date: formatDate(
+      new Date(
+        today.getFullYear(),
+        today.getMonth(),
+        today.getDate() - (arr.length - 1 - idx),
+      ),
+    ),
+    status: rec.status,
+  }));
 }
 
 function parseAttendanceCsv(csv: string): Department[] {
   const lines = csv.trim().split(/\r?\n/);
   if (!lines.length) return [];
   const header = lines[0].split(",").map((h) => h.trim());
-  const col = (name: string) => header.findIndex((h) => h.toLowerCase().includes(name.toLowerCase()));
+  const col = (name: string) =>
+    header.findIndex((h) => h.toLowerCase().includes(name.toLowerCase()));
   const idIdx = col("Employee ID");
   const nameIdx = col("Employee Name");
   const deptIdx = col("Department");
@@ -81,14 +99,22 @@ function parseAttendanceCsv(csv: string): Department[] {
   const absentIdx = col("Absent");
   const leaveIdx = col("Leave");
 
-  type Row = { id: string; name: string; dept: string; p: number; a: number; l: number };
+  type Row = {
+    id: string;
+    name: string;
+    dept: string;
+    p: number;
+    a: number;
+    l: number;
+  };
   const rows: Row[] = [];
   for (let i = 1; i < lines.length; i++) {
     const cells = lines[i].split(",").map((c) => c.trim());
     const id = cells[idIdx] ?? "";
     const name = cells[nameIdx] ?? "";
     const deptRaw = (cells[deptIdx] ?? "").toUpperCase();
-    const dept = deptRaw === "ADMIN" || deptRaw === "PRINCIPAL" ? "ADMIN" : deptRaw;
+    const dept =
+      deptRaw === "ADMIN" || deptRaw === "PRINCIPAL" ? "ADMIN" : deptRaw;
     if (!id || !name || !dept) continue;
     const p = Number(cells[presentIdx] ?? 0) || 0;
     const a = Number(cells[absentIdx] ?? 0) || 0;
@@ -148,17 +174,28 @@ const DEPT_LABELS: Record<string, string> = {
   ADMIN: "Administration",
 };
 
-function normalizeDeptToken(tokens: string[], i: number): { code: string; nextIndex: number } {
+function normalizeDeptToken(
+  tokens: string[],
+  i: number,
+): { code: string; nextIndex: number } {
   const t = tokens[i];
   const next = tokens[i + 1];
-  if (t === "Admin" || t === "PRINCIPAL" || (t === "ASST." && next === "REGISTRATAR")) {
+  if (
+    t === "Admin" ||
+    t === "PRINCIPAL" ||
+    (t === "ASST." && next === "REGISTRATAR")
+  ) {
     return { code: "ADMIN", nextIndex: t === "ASST." ? i + 2 : i + 1 };
   }
   return { code: t, nextIndex: i + 1 };
 }
 
 function toEmail(name: string, code: string) {
-  const handle = name.toLowerCase().replace(/[^a-z]+/g, ".").replace(/\.+/g, ".").replace(/^\.|\.$/g, "");
+  const handle = name
+    .toLowerCase()
+    .replace(/[^a-z]+/g, ".")
+    .replace(/\.+/g, ".")
+    .replace(/^\.|\.$/g, "");
   return `${handle}@${code.toLowerCase()}.tint.edu`;
 }
 
@@ -169,7 +206,22 @@ function parseProvidedData(raw: string): Department[] {
     .map((s) => s.trim())
     .filter((s) => s.startsWith("TIG"));
 
-  const known = new Set(["AEIE","BSH","CE","CSE","ECE","EE","IT","MBA","MCA","ME","Admin","PRINCIPAL","ASST.","REGISTRATAR"]);
+  const known = new Set([
+    "AEIE",
+    "BSH",
+    "CE",
+    "CSE",
+    "ECE",
+    "EE",
+    "IT",
+    "MBA",
+    "MCA",
+    "ME",
+    "Admin",
+    "PRINCIPAL",
+    "ASST.",
+    "REGISTRATAR",
+  ]);
 
   type Row = { id: string; name: string; dept: string };
   const rows: Row[] = [];
@@ -182,7 +234,8 @@ function parseProvidedData(raw: string): Department[] {
     while (i < tokens.length) {
       const token = tokens[i];
       const nxt = tokens[i + 1];
-      if (known.has(token) || (token === "ASST." && nxt === "REGISTRATAR")) break;
+      if (known.has(token) || (token === "ASST." && nxt === "REGISTRATAR"))
+        break;
       i++;
     }
     const name = tokens.slice(1, i).join(" ").trim();
@@ -366,7 +419,13 @@ function FacultyCard({ faculty }: { faculty: FacultyMember }) {
   );
 }
 
-function HODCard({ hod, defaultOpen = false }: { hod: HOD; defaultOpen?: boolean }) {
+function HODCard({
+  hod,
+  defaultOpen = false,
+}: {
+  hod: HOD;
+  defaultOpen?: boolean;
+}) {
   const [open, setOpen] = useState(!!defaultOpen);
   return (
     <Card className="overflow-hidden hover:shadow-brand">
@@ -445,7 +504,18 @@ function DepartmentCard({
       )}
     >
       <CardContent className="p-5">
-        <div className="flex items-center justify-between cursor-pointer select-none" role="button" tabIndex={0} onClick={toggle} onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); toggle(); } }}>
+        <div
+          className="flex items-center justify-between cursor-pointer select-none"
+          role="button"
+          tabIndex={0}
+          onClick={toggle}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" || e.key === " ") {
+              e.preventDefault();
+              toggle();
+            }
+          }}
+        >
           <div className="flex items-center gap-3">
             <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-red-600 to-red-500 text-white grid place-items-center">
               <Building2 className="h-5 w-5" />
@@ -464,7 +534,10 @@ function DepartmentCard({
             size="icon"
             aria-expanded={isOpen}
             aria-label={isOpen ? "Hide HOD" : "Show HOD"}
-            onClick={(e) => { e.stopPropagation(); toggle(); }}
+            onClick={(e) => {
+              e.stopPropagation();
+              toggle();
+            }}
             className="rounded-full bg-red-50 hover:bg-red-100 border border-red-200"
           >
             <Plus
@@ -499,7 +572,7 @@ export default function PrincipalDashboard() {
     parseProvidedData(PROVIDED_STAFF_RAW),
   );
   const [selectedDeptId, setSelectedDeptId] = useState<string>(
-    departments[0]?.id ?? ""
+    departments[0]?.id ?? "",
   );
   const filtered = useMemo(() => {
     const found = departments.find((d) => d.id === selectedDeptId);
@@ -507,7 +580,8 @@ export default function PrincipalDashboard() {
   }, [departments, selectedDeptId]);
 
   useEffect(() => {
-    const EXCEL_URL = "https://cdn.builder.io/o/assets%2Fc2eca9bb69a4489eadc6428a9e2e2956%2Ff3c4eb3b9f774518ac86dbf0d21d35f3?alt=media&token=8b1bbe91-5c07-4d39-94a2-f3c0f919ea32&apiKey=c2eca9bb69a4489eadc6428a9e2e2956";
+    const EXCEL_URL =
+      "https://cdn.builder.io/o/assets%2Fc2eca9bb69a4489eadc6428a9e2e2956%2Ff3c4eb3b9f774518ac86dbf0d21d35f3?alt=media&token=8b1bbe91-5c07-4d39-94a2-f3c0f919ea32&apiKey=c2eca9bb69a4489eadc6428a9e2e2956";
     (async () => {
       try {
         const buf = await fetch(EXCEL_URL).then((r) => {
@@ -521,13 +595,15 @@ export default function PrincipalDashboard() {
         } catch (modErr) {
           // Dynamic import failed in this environment — load UMD bundle as fallback
           await new Promise<void>((resolve, reject) => {
-            const url = "https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js";
+            const url =
+              "https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js";
             // If already present, resolve
             if ((window as any).XLSX) return resolve();
             const s = document.createElement("script");
             s.src = url;
             s.onload = () => resolve();
-            s.onerror = () => reject(new Error("Failed to load xlsx UMD bundle"));
+            s.onerror = () =>
+              reject(new Error("Failed to load xlsx UMD bundle"));
             document.head.appendChild(s);
           });
           xlsxModule = (window as any).XLSX;
@@ -537,19 +613,27 @@ export default function PrincipalDashboard() {
 
         const wb = xlsxModule.read(buf, { type: "array" });
         const sheet = wb.Sheets[wb.SheetNames[0]];
-        const rows: any[] = xlsxModule.utils.sheet_to_json(sheet, { defval: "" });
+        const rows: any[] = xlsxModule.utils.sheet_to_json(sheet, {
+          defval: "",
+        });
         const norm = (s: string) => s.toLowerCase().replace(/\s+/g, " ").trim();
         const byName = new Map<string, any>();
         for (const row of rows) {
-          const nameKey = Object.keys(row).find((k) => k.toLowerCase().includes("employee name")) ?? Object.keys(row).find((k) => k.toLowerCase().includes("name"));
+          const nameKey =
+            Object.keys(row).find((k) =>
+              k.toLowerCase().includes("employee name"),
+            ) ?? Object.keys(row).find((k) => k.toLowerCase().includes("name"));
           if (!nameKey) continue;
           const name = String(row[nameKey] ?? "");
           if (!name) continue;
           byName.set(norm(name), row);
         }
-        const presentKey = (keys: string[]) => keys.find((k) => /\b(present|^p$)\b/i.test(k));
-        const absentKey = (keys: string[]) => keys.find((k) => /\b(absent|^a$)\b/i.test(k));
-        const leaveKey = (keys: string[]) => keys.find((k) => /\b(leave|^l$)\b/i.test(k));
+        const presentKey = (keys: string[]) =>
+          keys.find((k) => /\b(present|^p$)\b/i.test(k));
+        const absentKey = (keys: string[]) =>
+          keys.find((k) => /\b(absent|^a$)\b/i.test(k));
+        const leaveKey = (keys: string[]) =>
+          keys.find((k) => /\b(leave|^l$)\b/i.test(k));
 
         setDepartments((prev) =>
           prev.map((dept) => ({
@@ -573,7 +657,7 @@ export default function PrincipalDashboard() {
                 return { ...f, excelSummary: row, attendance };
               }),
             })),
-          }))
+          })),
         );
       } catch (err) {
         console.error("Failed to load Excel:", err);
@@ -592,7 +676,9 @@ export default function PrincipalDashboard() {
         </div>
         <div className="flex items-center gap-3">
           <div className="relative">
-            <label htmlFor="deptFilter" className="sr-only">Filter</label>
+            <label htmlFor="deptFilter" className="sr-only">
+              Filter
+            </label>
             <select
               id="deptFilter"
               value={selectedDeptId}
@@ -600,7 +686,9 @@ export default function PrincipalDashboard() {
               className="appearance-none text-sm pr-9 pl-3 py-2 rounded-md border bg-white shadow-sm focus:outline-none focus:ring-2 focus:ring-red-500"
             >
               {departments.map((d) => (
-                <option key={d.id} value={d.id}>{d.code} — {d.name}</option>
+                <option key={d.id} value={d.id}>
+                  {d.code} — {d.name}
+                </option>
               ))}
             </select>
             <ChevronDown className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -649,7 +737,12 @@ export default function PrincipalDashboard() {
         {filtered.map((dept) => {
           const isSelected = selectedDeptId === dept.id;
           return (
-            <DepartmentCard key={dept.id} dept={dept} selected={isSelected} defaultOpen={isSelected} />
+            <DepartmentCard
+              key={dept.id}
+              dept={dept}
+              selected={isSelected}
+              defaultOpen={isSelected}
+            />
           );
         })}
       </div>

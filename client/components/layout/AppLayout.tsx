@@ -18,7 +18,9 @@ function Sidebar() {
           alt="Techno India Group"
           className="h-12 w-12 rounded-full object-cover"
         />
-        <div className="font-semibold text-base leading-tight">Techno India Group</div>
+        <div className="font-semibold text-base leading-tight">
+          Techno India Group
+        </div>
       </div>
       <nav className="p-3 space-y-1 overflow-y-auto">
         {nav.map((item) => {
@@ -51,7 +53,11 @@ function Sidebar() {
 
 export default function AppLayout({ children }: { children: ReactNode }) {
   return (
-    <div className={cn("min-h-screen bg-background text-foreground overflow-x-hidden")}>
+    <div
+      className={cn(
+        "min-h-screen bg-background text-foreground overflow-x-hidden",
+      )}
+    >
       <header className="sticky top-0 z-40 w-full bg-primary text-primary-foreground md:ml-64 h-14">
         <div className="container flex items-center justify-between h-14 overflow-x-hidden">
           <div className="flex items-center gap-3">
