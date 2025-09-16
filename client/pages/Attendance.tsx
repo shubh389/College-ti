@@ -507,22 +507,12 @@ export default function Attendance() {
           <CardContent className="p-4">
             <p className="text-xs text-muted-foreground mb-2">Duration & CL Summary (Faculty from Excel, HOD rough)</p>
             {(() => {
-              const thisMonth = new Date().toISOString().slice(0,7); // YYYY-MM
-              const monthRows = punches.filter((p) => (p.inDate || p.outDate).startsWith(thisMonth));
-              const durations = monthRows.map((p) => p.durationMinutes).filter((m) => m && m > 0);
-              const avgMinutes = durations.length ? Math.round(durations.reduce((a, b) => a + b, 0) / durations.length) : 0;
-              const normalizedHours = (avgMinutes / 60).toFixed(2);
-              const underCount = monthRows.filter((p) => p.durationMinutes > 0 && p.durationMinutes < 450).length; // <7.5h
-              const graceBasedCL = Math.floor((monthRows.reduce((s, p) => s + (p.lateIn ? 1 : 0), 0) + monthRows.reduce((s, p) => s + (p.earlyOut ? 1 : 0), 0)) / 4);
-              const addnlCLFromAvg = Math.floor(underCount / 4);
-              const totalCL = graceBasedCL + addnlCLFromAvg;
-
-              // HOD rough data derived from faculty aggregates
-              const hodAvgMinutes = Math.max(450, Math.min(540, avgMinutes + 15));
+              const f = computeDuration(filteredPunches);
+              const hodAvgMinutes = Math.max(450, Math.min(540, f.avgMinutes + 15));
               const hodNormalized = (hodAvgMinutes / 60).toFixed(2);
-              const hodUnder = Math.max(0, Math.round(underCount * 0.2));
+              const hodUnder = Math.max(0, Math.round(f.underCount * 0.2));
               const hodAddnlCL = Math.floor(hodUnder / 4);
-              const hodGraceBasedCL = Math.max(0, Math.floor(graceBasedCL * 0.25));
+              const hodGraceBasedCL = 0;
               const hodTotalCL = hodGraceBasedCL + hodAddnlCL;
 
               return (
@@ -542,12 +532,12 @@ export default function Attendance() {
                     <tbody className="divide-y">
                       <tr className="hover:bg-muted/20">
                         <td className="p-2 font-medium">Faculty (Excel)</td>
-                        <td className="p-2 font-semibold">{avgMinutes} min (avg)</td>
-                        <td className="p-2 font-semibold">{normalizedHours} h</td>
-                        <td className="p-2 font-semibold">{normalizedHours} h</td>
-                        <td className="p-2 font-semibold">{underCount}</td>
-                        <td className="p-2 font-semibold">{addnlCLFromAvg}</td>
-                        <td className="p-2 font-semibold">{totalCL}</td>
+                        <td className="p-2 font-semibold">{f.avgMinutes} min (avg)</td>
+                        <td className="p-2 font-semibold">{f.normalizedHours} h</td>
+                        <td className="p-2 font-semibold">{f.normalizedHours} h</td>
+                        <td className="p-2 font-semibold">{f.underCount}</td>
+                        <td className="p-2 font-semibold">{f.addnlCLFromAvg}</td>
+                        <td className="p-2 font-semibold">{f.totalCL}</td>
                       </tr>
                       <tr className="hover:bg-muted/20">
                         <td className="p-2 font-medium">HOD (rough)</td>
@@ -563,6 +553,7 @@ export default function Attendance() {
                 </div>
               );
             })()}
+            <div className="mt-3"><Button onClick={exportDuration} variant="secondary">Export XLSX</Button></div>
           </CardContent>
         </Card>
       </div>
