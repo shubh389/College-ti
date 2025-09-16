@@ -561,7 +561,10 @@ export default function Attendance() {
       <div className="grid grid-cols-1 gap-6">
         <Card>
           <CardContent className="p-4">
-            <p className="text-xs text-muted-foreground mb-2">Department People (HOD view)</p>
+            <div className="flex items-end justify-between mb-2">
+              <p className="text-xs text-muted-foreground">Department People (HOD view)</p>
+              <Button onClick={() => exportDeptPeople(deptPeople)} variant="secondary">Export XLSX</Button>
+            </div>
             <div className="overflow-auto rounded-md border">
               <table className="min-w-[1000px] text-sm">
                 <thead className="bg-muted/40 text-left">
