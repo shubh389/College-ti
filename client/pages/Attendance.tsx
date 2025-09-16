@@ -347,7 +347,7 @@ export default function Attendance() {
       <div className="grid grid-cols-1 gap-6">
         <Card>
           <CardContent className="p-4">
-            <p className="text-xs text-muted-foreground mb-2">Duration & CL Summary</p>
+            <p className="text-xs text-muted-foreground mb-2">Duration & CL Summary (Faculty from Excel, HOD rough)</p>
             {(() => {
               const thisMonth = new Date().toISOString().slice(0,7); // YYYY-MM
               const monthRows = punches.filter((p) => (p.inDate || p.outDate).startsWith(thisMonth));
@@ -358,22 +358,48 @@ export default function Attendance() {
               const graceBasedCL = Math.floor((monthRows.reduce((s, p) => s + (p.lateIn ? 1 : 0), 0) + monthRows.reduce((s, p) => s + (p.earlyOut ? 1 : 0), 0)) / 4);
               const addnlCLFromAvg = Math.floor(underCount / 4);
               const totalCL = graceBasedCL + addnlCLFromAvg;
+
+              // HOD rough data derived from faculty aggregates
+              const hodAvgMinutes = Math.max(450, Math.min(540, avgMinutes + 15));
+              const hodNormalized = (hodAvgMinutes / 60).toFixed(2);
+              const hodUnder = Math.max(0, Math.round(underCount * 0.2));
+              const hodAddnlCL = Math.floor(hodUnder / 4);
+              const hodGraceBasedCL = Math.max(0, Math.floor(graceBasedCL * 0.25));
+              const hodTotalCL = hodGraceBasedCL + hodAddnlCL;
+
               return (
                 <div className="overflow-auto rounded-md border">
-                  <table className="min-w-[640px] text-sm">
+                  <table className="min-w-[980px] text-sm">
                     <thead className="bg-muted/40 text-left">
                       <tr>
-                        <th className="p-2">Metric</th>
-                        <th className="p-2">Value</th>
+                        <th className="p-2">Role</th>
+                        <th className="p-2">Duration</th>
+                        <th className="p-2">Normalized Duration</th>
+                        <th className="p-2">Avg Monthly Duration</th>
+                        <th className="p-2">Avg &lt;7.5h</th>
+                        <th className="p-2">Addnl CL for Average Duration</th>
+                        <th className="p-2">Total CL</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y">
-                      <tr><td className="p-2">Duration</td><td className="p-2 font-semibold">{avgMinutes} min (avg this month)</td></tr>
-                      <tr><td className="p-2">Normalized Duration</td><td className="p-2 font-semibold">{normalizedHours} h (avg)</td></tr>
-                      <tr><td className="p-2">Avg Monthly Duration</td><td className="p-2 font-semibold">{normalizedHours} h</td></tr>
-                      <tr><td className="p-2">Avg &lt;7.5h</td><td className="p-2 font-semibold">{underCount}</td></tr>
-                      <tr><td className="p-2">Addnl CL for Average Duration</td><td className="p-2 font-semibold">{addnlCLFromAvg}</td></tr>
-                      <tr><td className="p-2">Total CL</td><td className="p-2 font-semibold">{totalCL}</td></tr>
+                      <tr className="hover:bg-muted/20">
+                        <td className="p-2 font-medium">Faculty (Excel)</td>
+                        <td className="p-2 font-semibold">{avgMinutes} min (avg)</td>
+                        <td className="p-2 font-semibold">{normalizedHours} h</td>
+                        <td className="p-2 font-semibold">{normalizedHours} h</td>
+                        <td className="p-2 font-semibold">{underCount}</td>
+                        <td className="p-2 font-semibold">{addnlCLFromAvg}</td>
+                        <td className="p-2 font-semibold">{totalCL}</td>
+                      </tr>
+                      <tr className="hover:bg-muted/20">
+                        <td className="p-2 font-medium">HOD (rough)</td>
+                        <td className="p-2 font-semibold">{hodAvgMinutes} min (avg)</td>
+                        <td className="p-2 font-semibold">{hodNormalized} h</td>
+                        <td className="p-2 font-semibold">{hodNormalized} h</td>
+                        <td className="p-2 font-semibold">{hodUnder}</td>
+                        <td className="p-2 font-semibold">{hodAddnlCL}</td>
+                        <td className="p-2 font-semibold">{hodTotalCL}</td>
+                      </tr>
                     </tbody>
                   </table>
                 </div>
