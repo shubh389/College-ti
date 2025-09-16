@@ -342,7 +342,7 @@ export default function Attendance() {
 
   const deptPeople = useMemo(() => {
     const map = new Map<string, Set<string>>();
-    for (const p of punches) {
+    for (const p of filteredPunches) {
       const dept = p.department || "Unknown";
       let set = map.get(dept);
       if (!set) {
