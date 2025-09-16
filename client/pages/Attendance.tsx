@@ -410,7 +410,20 @@ export default function Attendance() {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <Card>
           <CardContent className="p-4">
-            <p className="text-xs text-muted-foreground mb-2">Detailed Punches (Excel)</p>
+            <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3 mb-2">
+              <p className="text-xs text-muted-foreground">Detailed Punches (Excel)</p>
+              <div className="grid grid-cols-2 md:grid-cols-5 gap-2">
+                <select value={filterDept} onChange={(e) => setFilterDept(e.target.value)} className="border rounded-md px-2 py-1 text-sm">
+                  {departments.map((d) => (
+                    <option key={d} value={d}>{d}</option>
+                  ))}
+                </select>
+                <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search name/ID" className="border rounded-md px-2 py-1 text-sm" />
+                <input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} className="border rounded-md px-2 py-1 text-sm" />
+                <input type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} className="border rounded-md px-2 py-1 text-sm" />
+                <Button onClick={exportDetailed} variant="secondary" className="whitespace-nowrap">Export XLSX</Button>
+              </div>
+            </div>
             <div className="overflow-auto rounded-md border">
               <table className="min-w-[1100px] text-sm">
                 <thead className="bg-muted/40 text-left">
