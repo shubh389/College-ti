@@ -366,8 +366,8 @@ function FacultyCard({ faculty }: { faculty: FacultyMember }) {
   );
 }
 
-function HODCard({ hod }: { hod: HOD }) {
-  const [open, setOpen] = useState(false);
+function HODCard({ hod, defaultOpen = false }: { hod: HOD; defaultOpen?: boolean }) {
+  const [open, setOpen] = useState(!!defaultOpen);
   return (
     <Card className="overflow-hidden hover:shadow-brand">
       <CardContent className="p-4">
@@ -484,7 +484,7 @@ function DepartmentCard({
             />
             <div className="space-y-3">
               {dept.hods.map((h) => (
-                <HODCard key={h.id} hod={h} />
+                <HODCard key={h.id} hod={h} defaultOpen />
               ))}
             </div>
           </div>

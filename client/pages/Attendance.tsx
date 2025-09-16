@@ -2,6 +2,23 @@ import { useMemo } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { ResponsiveContainer, PieChart, Pie, Cell, Tooltip as RTooltip, LineChart, Line, XAxis, YAxis, CartesianGrid, Legend } from "recharts";
 
+interface PunchRow {
+  cardId: string;
+  empId: string;
+  name: string;
+  inDate: string;
+  inTime: string;
+  outDate: string;
+  outTime: string;
+  department: string;
+  college: string;
+  graceIn: boolean;
+  graceOut: boolean;
+  lateIn: boolean;
+  earlyOut: boolean;
+  durationMinutes: number;
+}
+
 interface DayRecord {
   date: string; // YYYY-MM-DD
   present: boolean;
@@ -51,7 +68,127 @@ function genMonth(year: number, month: number): DayRecord[] {
 }
 
 export default function Attendance() {
+  const [punches, setPunches] = useState<PunchRow[]>([]);
   const data = useMemo(() => genMonth(new Date().getFullYear(), new Date().getMonth()), []);
+
+  useEffect(() => {
+    const EXCEL_URL = "https://cdn.builder.io/o/assets%2F0d7360767e284db5a397928f0c050cd5%2F72b73b9e8cbc4f9892829523a385b953?alt=media&token=21718648-bc93-441b-9ef9-f45d021b7db1&apiKey=0d7360767e284db5a397928f0c050cd5";
+    (async () => {
+      try {
+        const buf = await fetch(EXCEL_URL).then((r) => {
+          if (!r.ok) throw new Error(`Failed to fetch Excel: ${r.status}`);
+          return r.arrayBuffer();
+        });
+        let xlsx: any = null;
+        try {
+          xlsx = await import("xlsx");
+        } catch {
+          await new Promise<void>((resolve, reject) => {
+            if ((window as any).XLSX) return resolve();
+            const s = document.createElement("script");
+            s.src = "https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js";
+            s.onload = () => resolve();
+            s.onerror = () => reject(new Error("Failed to load xlsx UMD bundle"));
+            document.head.appendChild(s);
+          });
+          xlsx = (window as any).XLSX;
+        }
+        const wb = xlsx.read(buf, { type: "array" });
+        const sheet = wb.Sheets[wb.SheetNames[0]];
+        const rows: any[] = xlsx.utils.sheet_to_json(sheet, { defval: "" });
+        const norm = (s: string) => String(s ?? "").toLowerCase().replace(/\s+/g, " ").trim();
+        const findKey = (obj: any, regex: RegExp, fallbackKeys: string[] = []) => {
+          const keys = Object.keys(obj);
+          const found = keys.find((k) => regex.test(k.toLowerCase()));
+          if (found) return found;
+          return fallbackKeys.find((f) => keys.some((k) => norm(k) === norm(f))) ?? "";
+        };
+        const parseDate = (v: any): string => {
+          if (v instanceof Date) return v.toISOString().slice(0, 10);
+          const s = String(v).trim();
+          if (!s) return "";
+          const d = new Date(s);
+          if (!isNaN(d.getTime())) return d.toISOString().slice(0, 10);
+          const m = s.match(/(\d{1,2})[\/-](\d{1,2})[\/-](\d{2,4})/);
+          if (m) {
+            const [_, dd, mm, yyyy] = m;
+            const year = Number(yyyy.length === 2 ? `20${yyyy}` : yyyy);
+            const dt = new Date(year, Number(mm) - 1, Number(dd));
+            return dt.toISOString().slice(0, 10);
+          }
+          return "";
+        };
+        const parseTime = (v: any): string => {
+          const s = String(v).trim();
+          if (!s) return "";
+          const m = s.match(/(\d{1,2}):(\d{2})/);
+          if (m) return `${m[1].padStart(2, "0")}:${m[2]}`;
+          return "";
+        };
+        const toBool = (v: any): boolean => {
+          const s = norm(v);
+          if (s === "yes" || s === "y" || s === "true" || s === "1") return true;
+          if (s === "no" || s === "n" || s === "false" || s === "0") return false;
+          return Boolean(v);
+        };
+
+        const mapped: PunchRow[] = rows.map((row) => {
+          const cardKey = findKey(row, /card\s*id|card\s*no|card\s*number/);
+          const empKey = findKey(row, /employee\s*id|emp\s*id|id$/);
+          const nameKey = findKey(row, /employee\s*name|name/);
+          const deptKey = findKey(row, /department|dept/);
+          const collegeKey = findKey(row, /college|institute|org/);
+          const inDateKey = findKey(row, /in\s*date|date\s*in|entry\s*date/);
+          const inTimeKey = findKey(row, /in\s*time|time\s*in|entry\s*time/);
+          const outDateKey = findKey(row, /out\s*date|date\s*out|exit\s*date/);
+          const outTimeKey = findKey(row, /out\s*time|time\s*out|exit\s*time/);
+          const graceInKey = findKey(row, /grace\s*in|late\s*in/);
+          const graceOutKey = findKey(row, /grace\s*out|early\s*out/);
+          const lateInKey = findKey(row, /late\s*in/);
+          const earlyOutKey = findKey(row, /early\s*out/);
+
+          const inDate = parseDate(row[inDateKey]);
+          const outDate = parseDate(row[outDateKey]);
+          const inTime = parseTime(row[inTimeKey]);
+          const outTime = parseTime(row[outTimeKey]);
+
+          let durationMinutes = 0;
+          if (inDate && inTime && outDate && outTime) {
+            const start = new Date(`${inDate}T${inTime}:00`);
+            const end = new Date(`${outDate}T${outTime}:00`);
+            const diff = Math.max(0, end.getTime() - start.getTime());
+            durationMinutes = Math.round(diff / 60000);
+          }
+
+          const graceIn = toBool(row[graceInKey] ?? false);
+          const graceOut = toBool(row[graceOutKey] ?? false);
+          const lateIn = lateInKey ? toBool(row[lateInKey]) : graceIn;
+          const earlyOut = earlyOutKey ? toBool(row[earlyOutKey]) : graceOut;
+
+          return {
+            cardId: String(row[cardKey] ?? ""),
+            empId: String(row[empKey] ?? ""),
+            name: String(row[nameKey] ?? ""),
+            inDate,
+            inTime,
+            outDate,
+            outTime,
+            department: String(row[deptKey] ?? ""),
+            college: String(row[collegeKey] ?? ""),
+            graceIn,
+            graceOut,
+            lateIn,
+            earlyOut,
+            durationMinutes,
+          } as PunchRow;
+        });
+
+        setPunches(mapped.filter((m) => m.name));
+      } catch (e) {
+        console.error("Failed to load attendance excel", e);
+      }
+    })();
+  }, []);
 
   const monthly = useMemo(() => {
     const present = data.filter((d) => d.present).length;
@@ -122,41 +259,42 @@ export default function Attendance() {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <Card>
           <CardContent className="p-4">
-            <p className="text-xs text-muted-foreground mb-2">Punches (This Month)</p>
+            <p className="text-xs text-muted-foreground mb-2">Detailed Punches (Excel)</p>
             <div className="overflow-auto rounded-md border">
-              <table className="min-w-[980px] text-sm">
-                <colgroup>
-                  <col className="w-[140px]" />
-                  <col className="w-[160px]" />
-                  <col className="w-[140px]" />
-                  <col className="w-[140px]" />
-                  <col className="w-[160px]" />
-                </colgroup>
+              <table className="min-w-[1200px] text-sm">
                 <thead className="bg-muted/40 text-left">
                   <tr>
-                    <th className="p-2">Date</th>
-                    <th className="p-2">Going In</th>
+                    <th className="p-2">Card Id</th>
+                    <th className="p-2">Employee ID</th>
+                    <th className="p-2">Employee Name</th>
+                    <th className="p-2">In Date</th>
+                    <th className="p-2">In Time</th>
+                    <th className="p-2">Out Date</th>
+                    <th className="p-2">Out Time</th>
+                    <th className="p-2">Department</th>
+                    <th className="p-2">College</th>
                     <th className="p-2">Grace In</th>
                     <th className="p-2">Grace Out</th>
-                    <th className="p-2">Going Out</th>
+                    <th className="p-2">Late In</th>
+                    <th className="p-2">Early Out</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y">
-                  {data.map((r) => (
-                    <tr key={r.date} className="hover:bg-muted/20">
-                      <td className="p-2 text-muted-foreground">{r.date}</td>
-                      <td className="p-2">{r.comeIn}</td>
-                      <td className="p-2">
-                        <span className={r.graceIn ? "px-2 py-0.5 rounded-full text-xs bg-red-50 text-red-700 border border-red-200" : "px-2 py-0.5 rounded-full text-xs bg-muted text-muted-foreground"}>
-                          {r.graceIn ? "Yes" : "No"}
-                        </span>
-                      </td>
-                      <td className="p-2">
-                        <span className={r.graceOut ? "px-2 py-0.5 rounded-full text-xs bg-red-50 text-red-700 border border-red-200" : "px-2 py-0.5 rounded-full text-xs bg-muted text-muted-foreground"}>
-                          {r.graceOut ? "Yes" : "No"}
-                        </span>
-                      </td>
-                      <td className="p-2">{r.comeOut}</td>
+                  {punches.map((r, i) => (
+                    <tr key={`${r.empId}-${i}`} className="hover:bg-muted/20">
+                      <td className="p-2 text-muted-foreground">{r.cardId}</td>
+                      <td className="p-2">{r.empId}</td>
+                      <td className="p-2">{r.name}</td>
+                      <td className="p-2">{r.inDate}</td>
+                      <td className="p-2">{r.inTime}</td>
+                      <td className="p-2">{r.outDate}</td>
+                      <td className="p-2">{r.outTime}</td>
+                      <td className="p-2">{r.department}</td>
+                      <td className="p-2">{r.college}</td>
+                      <td className="p-2">{r.graceIn ? "Yes" : "No"}</td>
+                      <td className="p-2">{r.graceOut ? "Yes" : "No"}</td>
+                      <td className="p-2">{r.lateIn ? "Yes" : "No"}</td>
+                      <td className="p-2">{r.earlyOut ? "Yes" : "No"}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -167,55 +305,38 @@ export default function Attendance() {
 
         <Card>
           <CardContent className="p-4 space-y-4">
-            <p className="text-xs text-muted-foreground">Leave Ledger</p>
-            <div className="grid grid-cols-3 gap-3">
-              <div className="rounded-lg border p-3 text-center bg-red-50 border-red-200">
-                <div className="text-xs text-red-700">Grace In</div>
-                <div className="text-2xl font-semibold text-red-700">{graceInCount}</div>
-              </div>
-              <div className="rounded-lg border p-3 text-center bg-red-50 border-red-200">
-                <div className="text-xs text-red-700">Grace Out</div>
-                <div className="text-2xl font-semibold text-red-700">{graceOutCount}</div>
-              </div>
-              <div className="rounded-lg border p-3 text-center bg-red-50 border-red-200">
-                <div className="text-xs text-red-700">CL from Grace</div>
-                <div className="text-2xl font-semibold text-red-700">{clFromGrace}</div>
-              </div>
-            </div>
-            <div className="overflow-auto rounded-md border">
-              <table className="min-w-[560px] text-sm">
-                <thead className="bg-muted/40 text-left">
-                  <tr>
-                    <th className="p-2">Type</th>
-                    <th className="p-2">Count</th>
-                    <th className="p-2">Rule</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y">
-                  <tr className="hover:bg-muted/20">
-                    <td className="p-2">
-                      <span className="px-2.5 py-0.5 rounded-full text-xs bg-red-100 text-red-700 border border-red-200">CL</span>
-                    </td>
-                    <td className="p-2 font-semibold">{clFromGrace}</td>
-                    <td className="p-2 text-muted-foreground">4 grace in/out = 1 CL</td>
-                  </tr>
-                  <tr className="hover:bg-muted/20">
-                    <td className="p-2">
-                      <span className="px-2.5 py-0.5 rounded-full text-xs bg-amber-100 text-amber-800 border border-amber-200">EL</span>
-                    </td>
-                    <td className="p-2 font-semibold">{Math.max(0, Math.floor(monthly.leave / 3) - clFromGrace)}</td>
-                    <td className="p-2 text-muted-foreground">Derived</td>
-                  </tr>
-                  <tr className="hover:bg-muted/20">
-                    <td className="p-2">
-                      <span className="px-2.5 py-0.5 rounded-full text-xs bg-rose-100 text-rose-800 border border-rose-200">ML</span>
-                    </td>
-                    <td className="p-2 font-semibold">{Math.max(0, monthly.leave - (Math.max(0, Math.floor(monthly.leave / 3) - clFromGrace)) - clFromGrace)}</td>
-                    <td className="p-2 text-muted-foreground">Derived</td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
+            <p className="text-xs text-muted-foreground">Cumulative Summary</p>
+            {(() => {
+              const lateInCount = punches.reduce((s, p) => s + (p.lateIn ? 1 : 0), 0);
+              const earlyOutCount = punches.reduce((s, p) => s + (p.earlyOut ? 1 : 0), 0);
+              const doubleGrace = punches.reduce((s, p) => s + (p.graceIn && p.graceOut ? 1 : 0), 0);
+              const observations = punches.reduce((s, p) => s + ((p.lateIn || p.earlyOut || p.graceIn || p.graceOut) ? 1 : 0), 0);
+              const cls = Math.floor((lateInCount + earlyOutCount) / 4);
+              const durations = punches.map((p) => p.durationMinutes).filter((m) => m && m > 0);
+              const avgMinutes = durations.length ? Math.round(durations.reduce((a, b) => a + b, 0) / durations.length) : 0;
+              const avgUnder = punches.filter((p) => p.durationMinutes > 0 && p.durationMinutes < 450).length;
+              return (
+                <div className="overflow-auto rounded-md border">
+                  <table className="min-w-[560px] text-sm">
+                    <thead className="bg-muted/40 text-left">
+                      <tr>
+                        <th className="p-2">Metric</th>
+                        <th className="p-2">Value</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y">
+                      <tr><td className="p-2"># Late In (cumulative)</td><td className="p-2 font-semibold">{lateInCount}</td></tr>
+                      <tr><td className="p-2"># Early Out (cum)</td><td className="p-2 font-semibold">{earlyOutCount}</td></tr>
+                      <tr><td className="p-2"># Double Grace (cumulative)</td><td className="p-2 font-semibold">{doubleGrace}</td></tr>
+                      <tr><td className="p-2"># Observations (cumulative)</td><td className="p-2 font-semibold">{observations}</td></tr>
+                      <tr><td className="p-2"># CLs (cumulative)</td><td className="p-2 font-semibold">{cls}</td></tr>
+                      <tr><td className="p-2">Duration</td><td className="p-2 font-semibold">{avgMinutes} min avg</td></tr>
+                      <tr><td className="p-2">Normalized Duration</td><td className="p-2 font-semibold">{(avgMinutes/60).toFixed(2)} h avg</td></tr>
+                    </tbody>
+                  </table>
+                </div>
+              );
+            })()}
           </CardContent>
         </Card>
       </div>

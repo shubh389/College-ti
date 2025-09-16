@@ -51,9 +51,9 @@ function Sidebar() {
 
 export default function AppLayout({ children }: { children: ReactNode }) {
   return (
-    <div className={cn("min-h-screen bg-background text-foreground")}>
+    <div className={cn("min-h-screen bg-background text-foreground overflow-x-hidden")}>
       <header className="sticky top-0 z-40 w-full bg-primary text-primary-foreground md:ml-64 h-14">
-        <div className="container flex items-center justify-between h-16">
+        <div className="container flex items-center justify-between h-14 overflow-x-hidden">
           <div className="flex items-center gap-3">
             <div className="h-9 w-9 rounded-xl bg-white/20" />
             <div>
