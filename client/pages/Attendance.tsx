@@ -234,6 +234,112 @@ export default function Attendance() {
 
   const lineData = data.map((d) => ({ day: d.date.slice(-2), in: d.graceIn ? 1 : 0, out: d.graceOut ? 1 : 0 }));
 
+  async function getXLSX() {
+    try {
+      return await import("xlsx");
+    } catch {
+      if ((window as any).XLSX) return (window as any).XLSX;
+      await new Promise<void>((resolve, reject) => {
+        const s = document.createElement("script");
+        s.src = "https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js";
+        s.onload = () => resolve();
+        s.onerror = () => reject(new Error("Failed to load XLSX"));
+        document.head.appendChild(s);
+      });
+      return (window as any).XLSX;
+    }
+  }
+
+  async function exportDetailed() {
+    const XLSX = await getXLSX();
+    const rows = filteredPunches.map((r) => ({
+      "Card Id": r.cardId,
+      "Employee ID": r.empId,
+      "Employee Name": r.name,
+      "In Date": r.inDate,
+      "In Time": r.inTime,
+      "Out Date": r.outDate,
+      "Out Time": r.outTime,
+      Department: r.department,
+      College: r.college,
+    }));
+    const wb = XLSX.utils.book_new();
+    const ws = XLSX.utils.json_to_sheet(rows);
+    XLSX.utils.book_append_sheet(wb, ws, "Detailed Punches");
+    XLSX.writeFile(wb, `detailed-punches-${new Date().toISOString().slice(0,10)}.xlsx`);
+  }
+
+  function computeCumulative(src: PunchRow[]) {
+    const graceInCount = src.reduce((s, p) => s + (p.graceIn ? 1 : 0), 0);
+    const graceOutCount = src.reduce((s, p) => s + (p.graceOut ? 1 : 0), 0);
+    const lateInCount = src.reduce((s, p) => s + (p.lateIn ? 1 : 0), 0);
+    const earlyOutCount = src.reduce((s, p) => s + (p.earlyOut ? 1 : 0), 0);
+    const doubleGrace = src.reduce((s, p) => s + (p.graceIn && p.graceOut ? 1 : 0), 0);
+    const observations = src.reduce((s, p) => s + ((p.lateIn || p.earlyOut || p.graceIn || p.graceOut) ? 1 : 0), 0);
+    const cls = Math.floor((lateInCount + earlyOutCount) / 4);
+    return { graceInCount, graceOutCount, lateInCount, earlyOutCount, doubleGrace, observations, cls };
+  }
+
+  async function exportCumulative() {
+    const XLSX = await getXLSX();
+    const c = computeCumulative(filteredPunches);
+    const row = [{
+      "Grace In": c.graceInCount,
+      "Grace Out": c.graceOutCount,
+      "Late In": c.lateInCount,
+      "Early Out": c.earlyOutCount,
+      "# Late In (cumulative)": c.lateInCount,
+      "# Early Out (cum)": c.earlyOutCount,
+      "# Double Grace (cumulative)": c.doubleGrace,
+      "# Observations (cumulative)": c.observations,
+      "# CLs (cumulative)": c.cls,
+    }];
+    const wb = XLSX.utils.book_new();
+    const ws = XLSX.utils.json_to_sheet(row);
+    XLSX.utils.book_append_sheet(wb, ws, "Cumulative");
+    XLSX.writeFile(wb, `cumulative-${new Date().toISOString().slice(0,10)}.xlsx`);
+  }
+
+  function computeDuration(src: PunchRow[]) {
+    const durations = src.map((p) => p.durationMinutes).filter((m) => m && m > 0);
+    const avgMinutes = durations.length ? Math.round(durations.reduce((a, b) => a + b, 0) / durations.length) : 0;
+    const normalizedHours = (avgMinutes / 60).toFixed(2);
+    const underCount = src.filter((p) => p.durationMinutes > 0 && p.durationMinutes < 450).length;
+    const graceBasedCL = Math.floor((src.reduce((s, p) => s + (p.lateIn ? 1 : 0), 0) + src.reduce((s, p) => s + (p.earlyOut ? 1 : 0), 0)) / 4);
+    const addnlCLFromAvg = Math.floor(underCount / 4);
+    const totalCL = graceBasedCL + addnlCLFromAvg;
+    return { avgMinutes, normalizedHours, underCount, addnlCLFromAvg, totalCL };
+  }
+
+  async function exportDuration() {
+    const XLSX = await getXLSX();
+    const f = computeDuration(filteredPunches);
+    const hodAvgMinutes = Math.max(450, Math.min(540, f.avgMinutes + 15));
+    const hodNormalized = (hodAvgMinutes / 60).toFixed(2);
+    const hodUnder = Math.max(0, Math.round(f.underCount * 0.2));
+    const hodAddnlCL = Math.floor(hodUnder / 4);
+    const hodGraceBased = 0;
+    const hodTotalCL = hodAddnlCL + hodGraceBased;
+
+    const rows = [
+      { Role: "Faculty (Excel)", Duration: `${f.avgMinutes} min (avg)`, "Normalized Duration": `${f.normalizedHours} h`, "Avg Monthly Duration": `${f.normalizedHours} h`, "Avg <7.5h": f.underCount, "Addnl CL for Average Duration": f.addnlCLFromAvg, "Total CL": f.totalCL },
+      { Role: "HOD (rough)", Duration: `${hodAvgMinutes} min (avg)`, "Normalized Duration": `${hodNormalized} h`, "Avg Monthly Duration": `${hodNormalized} h`, "Avg <7.5h": hodUnder, "Addnl CL for Average Duration": hodAddnlCL, "Total CL": hodTotalCL },
+    ];
+    const wb = XLSX.utils.book_new();
+    const ws = XLSX.utils.json_to_sheet(rows);
+    XLSX.utils.book_append_sheet(wb, ws, "Duration & CL");
+    XLSX.writeFile(wb, `duration-cl-${new Date().toISOString().slice(0,10)}.xlsx`);
+  }
+
+  async function exportDeptPeople(rows: { department: string; hod: string; count: number; names: string[] }[]) {
+    const XLSX = await getXLSX();
+    const out = rows.map((r) => ({ Department: r.department, HOD: r.hod || "", "People Count": r.count, People: r.names.join(", ") }));
+    const wb = XLSX.utils.book_new();
+    const ws = XLSX.utils.json_to_sheet(out);
+    XLSX.utils.book_append_sheet(wb, ws, "Dept People");
+    XLSX.writeFile(wb, `dept-people-${new Date().toISOString().slice(0,10)}.xlsx`);
+  }
+
   const deptPeople = useMemo(() => {
     const map = new Map<string, Set<string>>();
     for (const p of punches) {
