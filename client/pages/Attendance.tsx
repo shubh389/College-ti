@@ -440,7 +440,7 @@ export default function Attendance() {
                   </tr>
                 </thead>
                 <tbody className="divide-y">
-                  {punches.map((r, i) => (
+                  {filteredPunches.map((r, i) => (
                     <tr key={`${r.empId}-${i}`} className="hover:bg-muted/20">
                       <td className="p-2 text-muted-foreground">{r.cardId}</td>
                       <td className="p-2">{r.empId}</td>
