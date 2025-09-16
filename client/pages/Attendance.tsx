@@ -358,7 +358,7 @@ export default function Attendance() {
         return { department, count: set.size, hod, names };
       })
       .sort((a, b) => a.department.localeCompare(b.department));
-  }, [punches]);
+  }, [filteredPunches]);
 
   return (
     <div className="space-y-8">
