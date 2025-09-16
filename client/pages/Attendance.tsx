@@ -463,13 +463,7 @@ export default function Attendance() {
           <CardContent className="p-4 space-y-4">
             <p className="text-xs text-muted-foreground">Cumulative Summary</p>
             {(() => {
-              const graceInCount = punches.reduce((s, p) => s + (p.graceIn ? 1 : 0), 0);
-              const graceOutCount = punches.reduce((s, p) => s + (p.graceOut ? 1 : 0), 0);
-              const lateInCount = punches.reduce((s, p) => s + (p.lateIn ? 1 : 0), 0);
-              const earlyOutCount = punches.reduce((s, p) => s + (p.earlyOut ? 1 : 0), 0);
-              const doubleGrace = punches.reduce((s, p) => s + (p.graceIn && p.graceOut ? 1 : 0), 0);
-              const observations = punches.reduce((s, p) => s + ((p.lateIn || p.earlyOut || p.graceIn || p.graceOut) ? 1 : 0), 0);
-              const cls = Math.floor((lateInCount + earlyOutCount) / 4);
+              const { graceInCount, graceOutCount, lateInCount, earlyOutCount, doubleGrace, observations, cls } = computeCumulative(filteredPunches);
               return (
                 <div className="overflow-auto rounded-md border">
                   <table className="min-w-[1200px] text-sm">
@@ -503,6 +497,7 @@ export default function Attendance() {
                 </div>
               );
             })()}
+            <div className="mt-3"><Button onClick={exportCumulative} variant="secondary">Export XLSX</Button></div>
           </CardContent>
         </Card>
       </div>
