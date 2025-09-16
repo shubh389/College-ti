@@ -73,7 +73,7 @@ export default function Attendance() {
   const data = useMemo(() => genMonth(new Date().getFullYear(), new Date().getMonth()), []);
 
   useEffect(() => {
-    const EXCEL_URL = "https://cdn.builder.io/o/assets%2F0d7360767e284db5a397928f0c050cd5%2F72b73b9e8cbc4f9892829523a385b953?alt=media&token=21718648-bc93-441b-9ef9-f45d021b7db1&apiKey=0d7360767e284db5a397928f0c050cd5";
+    const EXCEL_URL = "https://cdn.builder.io/o/assets%2F0d7360767e284db5a397928f0c050cd5%2Fd844be6c7da449baad542fb249ed37ec?alt=media&token=ada026c9-a509-484f-9643-1fdedfc85007&apiKey=0d7360767e284db5a397928f0c050cd5";
     (async () => {
       try {
         const buf = await fetch(EXCEL_URL).then((r) => {
@@ -262,7 +262,7 @@ export default function Attendance() {
           <CardContent className="p-4">
             <p className="text-xs text-muted-foreground mb-2">Detailed Punches (Excel)</p>
             <div className="overflow-auto rounded-md border">
-              <table className="min-w-[1200px] text-sm">
+              <table className="min-w-[1100px] text-sm">
                 <thead className="bg-muted/40 text-left">
                   <tr>
                     <th className="p-2">Card Id</th>
@@ -274,10 +274,6 @@ export default function Attendance() {
                     <th className="p-2">Out Time</th>
                     <th className="p-2">Department</th>
                     <th className="p-2">College</th>
-                    <th className="p-2">Grace In</th>
-                    <th className="p-2">Grace Out</th>
-                    <th className="p-2">Late In</th>
-                    <th className="p-2">Early Out</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y">
@@ -292,10 +288,6 @@ export default function Attendance() {
                       <td className="p-2">{r.outTime}</td>
                       <td className="p-2">{r.department}</td>
                       <td className="p-2">{r.college}</td>
-                      <td className="p-2">{r.graceIn ? "Yes" : "No"}</td>
-                      <td className="p-2">{r.graceOut ? "Yes" : "No"}</td>
-                      <td className="p-2">{r.lateIn ? "Yes" : "No"}</td>
-                      <td className="p-2">{r.earlyOut ? "Yes" : "No"}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -308,17 +300,16 @@ export default function Attendance() {
           <CardContent className="p-4 space-y-4">
             <p className="text-xs text-muted-foreground">Cumulative Summary</p>
             {(() => {
+              const graceInCount = punches.reduce((s, p) => s + (p.graceIn ? 1 : 0), 0);
+              const graceOutCount = punches.reduce((s, p) => s + (p.graceOut ? 1 : 0), 0);
               const lateInCount = punches.reduce((s, p) => s + (p.lateIn ? 1 : 0), 0);
               const earlyOutCount = punches.reduce((s, p) => s + (p.earlyOut ? 1 : 0), 0);
               const doubleGrace = punches.reduce((s, p) => s + (p.graceIn && p.graceOut ? 1 : 0), 0);
               const observations = punches.reduce((s, p) => s + ((p.lateIn || p.earlyOut || p.graceIn || p.graceOut) ? 1 : 0), 0);
               const cls = Math.floor((lateInCount + earlyOutCount) / 4);
-              const durations = punches.map((p) => p.durationMinutes).filter((m) => m && m > 0);
-              const avgMinutes = durations.length ? Math.round(durations.reduce((a, b) => a + b, 0) / durations.length) : 0;
-              const avgUnder = punches.filter((p) => p.durationMinutes > 0 && p.durationMinutes < 450).length;
               return (
                 <div className="overflow-auto rounded-md border">
-                  <table className="min-w-[560px] text-sm">
+                  <table className="min-w-[640px] text-sm">
                     <thead className="bg-muted/40 text-left">
                       <tr>
                         <th className="p-2">Metric</th>
@@ -326,13 +317,54 @@ export default function Attendance() {
                       </tr>
                     </thead>
                     <tbody className="divide-y">
+                      <tr><td className="p-2">Grace In</td><td className="p-2 font-semibold">{graceInCount}</td></tr>
+                      <tr><td className="p-2">Grace Out</td><td className="p-2 font-semibold">{graceOutCount}</td></tr>
+                      <tr><td className="p-2">Late In</td><td className="p-2 font-semibold">{lateInCount}</td></tr>
+                      <tr><td className="p-2">Early Out</td><td className="p-2 font-semibold">{earlyOutCount}</td></tr>
                       <tr><td className="p-2"># Late In (cumulative)</td><td className="p-2 font-semibold">{lateInCount}</td></tr>
                       <tr><td className="p-2"># Early Out (cum)</td><td className="p-2 font-semibold">{earlyOutCount}</td></tr>
                       <tr><td className="p-2"># Double Grace (cumulative)</td><td className="p-2 font-semibold">{doubleGrace}</td></tr>
                       <tr><td className="p-2"># Observations (cumulative)</td><td className="p-2 font-semibold">{observations}</td></tr>
                       <tr><td className="p-2"># CLs (cumulative)</td><td className="p-2 font-semibold">{cls}</td></tr>
-                      <tr><td className="p-2">Duration</td><td className="p-2 font-semibold">{avgMinutes} min avg</td></tr>
-                      <tr><td className="p-2">Normalized Duration</td><td className="p-2 font-semibold">{(avgMinutes/60).toFixed(2)} h avg</td></tr>
+                    </tbody>
+                  </table>
+                </div>
+              );
+            })()}
+          </CardContent>
+        </Card>
+      </div>
+
+      <div className="grid grid-cols-1 gap-6">
+        <Card>
+          <CardContent className="p-4">
+            <p className="text-xs text-muted-foreground mb-2">Duration & CL Summary</p>
+            {(() => {
+              const thisMonth = new Date().toISOString().slice(0,7); // YYYY-MM
+              const monthRows = punches.filter((p) => (p.inDate || p.outDate).startsWith(thisMonth));
+              const durations = monthRows.map((p) => p.durationMinutes).filter((m) => m && m > 0);
+              const avgMinutes = durations.length ? Math.round(durations.reduce((a, b) => a + b, 0) / durations.length) : 0;
+              const normalizedHours = (avgMinutes / 60).toFixed(2);
+              const underCount = monthRows.filter((p) => p.durationMinutes > 0 && p.durationMinutes < 450).length; // <7.5h
+              const graceBasedCL = Math.floor((monthRows.reduce((s, p) => s + (p.lateIn ? 1 : 0), 0) + monthRows.reduce((s, p) => s + (p.earlyOut ? 1 : 0), 0)) / 4);
+              const addnlCLFromAvg = Math.floor(underCount / 4);
+              const totalCL = graceBasedCL + addnlCLFromAvg;
+              return (
+                <div className="overflow-auto rounded-md border">
+                  <table className="min-w-[640px] text-sm">
+                    <thead className="bg-muted/40 text-left">
+                      <tr>
+                        <th className="p-2">Metric</th>
+                        <th className="p-2">Value</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y">
+                      <tr><td className="p-2">Duration</td><td className="p-2 font-semibold">{avgMinutes} min (avg this month)</td></tr>
+                      <tr><td className="p-2">Normalized Duration</td><td className="p-2 font-semibold">{normalizedHours} h (avg)</td></tr>
+                      <tr><td className="p-2">Avg Monthly Duration</td><td className="p-2 font-semibold">{normalizedHours} h</td></tr>
+                      <tr><td className="p-2">Avg &lt;7.5h</td><td className="p-2 font-semibold">{underCount}</td></tr>
+                      <tr><td className="p-2">Addnl CL for Average Duration</td><td className="p-2 font-semibold">{addnlCLFromAvg}</td></tr>
+                      <tr><td className="p-2">Total CL</td><td className="p-2 font-semibold">{totalCL}</td></tr>
                     </tbody>
                   </table>
                 </div>
