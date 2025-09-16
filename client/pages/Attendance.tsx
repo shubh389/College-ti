@@ -73,6 +73,29 @@ export default function Attendance() {
   const [punches, setPunches] = useState<PunchRow[]>([]);
   const data = useMemo(() => genMonth(new Date().getFullYear(), new Date().getMonth()), []);
 
+  const [filterDept, setFilterDept] = useState<string>("All");
+  const [search, setSearch] = useState<string>("");
+  const [dateFrom, setDateFrom] = useState<string>("");
+  const [dateTo, setDateTo] = useState<string>("");
+
+  const departments = useMemo(() => {
+    const set = new Set<string>();
+    for (const p of punches) if (p.department) set.add(p.department);
+    return ["All", ...Array.from(set).sort((a, b) => a.localeCompare(b))];
+  }, [punches]);
+
+  const filteredPunches = useMemo(() => {
+    const norm = (s: string) => s.toLowerCase();
+    return punches.filter((p) => {
+      if (filterDept !== "All" && p.department !== filterDept) return false;
+      if (search && !norm(p.name).includes(norm(search)) && !norm(p.empId).includes(norm(search))) return false;
+      const d = p.inDate || p.outDate || "";
+      if (dateFrom && d && d < dateFrom) return false;
+      if (dateTo && d && d > dateTo) return false;
+      return true;
+    });
+  }, [punches, filterDept, search, dateFrom, dateTo]);
+
   useEffect(() => {
     const EXCEL_URL = "https://cdn.builder.io/o/assets%2F0d7360767e284db5a397928f0c050cd5%2Fd844be6c7da449baad542fb249ed37ec?alt=media&token=ada026c9-a509-484f-9643-1fdedfc85007&apiKey=0d7360767e284db5a397928f0c050cd5";
     (async () => {
