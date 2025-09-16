@@ -210,6 +210,26 @@ export default function Attendance() {
 
   const lineData = data.map((d) => ({ day: d.date.slice(-2), in: d.graceIn ? 1 : 0, out: d.graceOut ? 1 : 0 }));
 
+  const deptPeople = useMemo(() => {
+    const map = new Map<string, Set<string>>();
+    for (const p of punches) {
+      const dept = p.department || "Unknown";
+      let set = map.get(dept);
+      if (!set) {
+        set = new Set<string>();
+        map.set(dept, set);
+      }
+      if (p.name) set.add(p.name);
+    }
+    return Array.from(map.entries())
+      .map(([department, set]) => {
+        const names = Array.from(set).sort((a, b) => a.localeCompare(b));
+        const hod = names[0] ?? ""; // rough from first alpha name in dept
+        return { department, count: set.size, hod, names };
+      })
+      .sort((a, b) => a.department.localeCompare(b.department));
+  }, [punches]);
+
   return (
     <div className="space-y-8">
       <div>
@@ -405,6 +425,40 @@ export default function Attendance() {
                 </div>
               );
             })()}
+          </CardContent>
+        </Card>
+      </div>
+
+      <div className="grid grid-cols-1 gap-6">
+        <Card>
+          <CardContent className="p-4">
+            <p className="text-xs text-muted-foreground mb-2">Department People (HOD view)</p>
+            <div className="overflow-auto rounded-md border">
+              <table className="min-w-[1000px] text-sm">
+                <thead className="bg-muted/40 text-left">
+                  <tr>
+                    <th className="p-2">Department</th>
+                    <th className="p-2">HOD (rough)</th>
+                    <th className="p-2">People Count</th>
+                    <th className="p-2">People</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y">
+                  {deptPeople.map((d) => {
+                    const preview = d.names.slice(0, 10);
+                    const remaining = Math.max(0, d.names.length - preview.length);
+                    return (
+                      <tr key={d.department} className="hover:bg-muted/20">
+                        <td className="p-2 text-muted-foreground">{d.department}</td>
+                        <td className="p-2">{d.hod || "—"}</td>
+                        <td className="p-2">{d.count}</td>
+                        <td className="p-2">{preview.join(", ")}{remaining ? `, +${remaining} more` : ""}</td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
           </CardContent>
         </Card>
       </div>
