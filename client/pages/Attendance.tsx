@@ -309,23 +309,32 @@ export default function Attendance() {
               const cls = Math.floor((lateInCount + earlyOutCount) / 4);
               return (
                 <div className="overflow-auto rounded-md border">
-                  <table className="min-w-[640px] text-sm">
+                  <table className="min-w-[1200px] text-sm">
                     <thead className="bg-muted/40 text-left">
                       <tr>
-                        <th className="p-2">Metric</th>
-                        <th className="p-2">Value</th>
+                        <th className="p-2">Grace In</th>
+                        <th className="p-2">Grace Out</th>
+                        <th className="p-2">Late In</th>
+                        <th className="p-2">Early Out</th>
+                        <th className="p-2"># Late In (cumulative)</th>
+                        <th className="p-2"># Early Out (cum)</th>
+                        <th className="p-2"># Double Grace (cumulative)</th>
+                        <th className="p-2"># Observations (cumulative)</th>
+                        <th className="p-2"># CLs (cumulative)</th>
                       </tr>
                     </thead>
-                    <tbody className="divide-y">
-                      <tr><td className="p-2">Grace In</td><td className="p-2 font-semibold">{graceInCount}</td></tr>
-                      <tr><td className="p-2">Grace Out</td><td className="p-2 font-semibold">{graceOutCount}</td></tr>
-                      <tr><td className="p-2">Late In</td><td className="p-2 font-semibold">{lateInCount}</td></tr>
-                      <tr><td className="p-2">Early Out</td><td className="p-2 font-semibold">{earlyOutCount}</td></tr>
-                      <tr><td className="p-2"># Late In (cumulative)</td><td className="p-2 font-semibold">{lateInCount}</td></tr>
-                      <tr><td className="p-2"># Early Out (cum)</td><td className="p-2 font-semibold">{earlyOutCount}</td></tr>
-                      <tr><td className="p-2"># Double Grace (cumulative)</td><td className="p-2 font-semibold">{doubleGrace}</td></tr>
-                      <tr><td className="p-2"># Observations (cumulative)</td><td className="p-2 font-semibold">{observations}</td></tr>
-                      <tr><td className="p-2"># CLs (cumulative)</td><td className="p-2 font-semibold">{cls}</td></tr>
+                    <tbody>
+                      <tr className="hover:bg-muted/20">
+                        <td className="p-2 font-semibold">{graceInCount}</td>
+                        <td className="p-2 font-semibold">{graceOutCount}</td>
+                        <td className="p-2 font-semibold">{lateInCount}</td>
+                        <td className="p-2 font-semibold">{earlyOutCount}</td>
+                        <td className="p-2 font-semibold">{lateInCount}</td>
+                        <td className="p-2 font-semibold">{earlyOutCount}</td>
+                        <td className="p-2 font-semibold">{doubleGrace}</td>
+                        <td className="p-2 font-semibold">{observations}</td>
+                        <td className="p-2 font-semibold">{cls}</td>
+                      </tr>
                     </tbody>
                   </table>
                 </div>
