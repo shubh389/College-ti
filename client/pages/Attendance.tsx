@@ -548,13 +548,11 @@ export default function Attendance() {
         </Card>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <Card className="lg:col-span-2">
+      <div className="grid grid-cols-1 gap-6">
+        <Card>
           <CardContent className="p-4">
             <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3 mb-2">
-              <p className="text-xs text-muted-foreground">
-                Detailed Punches (Excel)
-              </p>
+              <p className="text-xs text-muted-foreground">Attendance detail</p>
               <div className="grid grid-cols-2 md:grid-cols-5 gap-2">
                 <select
                   value={filterDept}
@@ -585,17 +583,10 @@ export default function Attendance() {
                   onChange={(e) => setDateTo(e.target.value)}
                   className="border rounded-md px-2 py-1 text-sm"
                 />
-                <Button
-                  onClick={exportDetailed}
-                  variant="secondary"
-                  className="whitespace-nowrap"
-                >
-                  Export XLSX
-                </Button>
               </div>
             </div>
             <div className="overflow-auto rounded-md border">
-              <table className="min-w-[1100px] text-sm">
+              <table className="w-full min-w-[1100px] text-sm">
                 <thead className="bg-muted/40 text-left">
                   <tr>
                     <th className="p-2">Card Id</th>
@@ -675,11 +666,6 @@ export default function Attendance() {
                 </div>
               );
             })()}
-            <div className="mt-3">
-              <Button onClick={exportCumulative} variant="secondary">
-                Export XLSX
-              </Button>
-            </div>
           </CardContent>
         </Card>
       </div>
@@ -687,9 +673,7 @@ export default function Attendance() {
       <div className="grid grid-cols-1 gap-6">
         <Card>
           <CardContent className="p-4">
-            <p className="text-xs text-muted-foreground mb-2">
-              Duration & CL Summary (Faculty from Excel, HOD rough)
-            </p>
+            <p className="text-xs text-muted-foreground mb-2">Duration & CL Summary</p>
             {(() => {
               const f = computeDuration(filteredPunches);
               const hodAvgMinutes = Math.max(
@@ -718,7 +702,7 @@ export default function Attendance() {
                     </thead>
                     <tbody className="divide-y">
                       <tr className="hover:bg-muted/20">
-                        <td className="p-2 font-medium">Faculty (Excel)</td>
+                        <td className="p-2 font-medium">Faculty</td>
                         <td className="p-2 font-semibold">
                           {f.avgMinutes} min (avg)
                         </td>
@@ -734,82 +718,15 @@ export default function Attendance() {
                         </td>
                         <td className="p-2 font-semibold">{f.totalCL}</td>
                       </tr>
-                      <tr className="hover:bg-muted/20">
-                        <td className="p-2 font-medium">HOD (rough)</td>
-                        <td className="p-2 font-semibold">
-                          {hodAvgMinutes} min (avg)
-                        </td>
-                        <td className="p-2 font-semibold">{hodNormalized} h</td>
-                        <td className="p-2 font-semibold">{hodNormalized} h</td>
-                        <td className="p-2 font-semibold">{hodUnder}</td>
-                        <td className="p-2 font-semibold">{hodAddnlCL}</td>
-                        <td className="p-2 font-semibold">{hodTotalCL}</td>
-                      </tr>
                     </tbody>
                   </table>
                 </div>
               );
             })()}
-            <div className="mt-3">
-              <Button onClick={exportDuration} variant="secondary">
-                Export XLSX
-              </Button>
-            </div>
           </CardContent>
         </Card>
       </div>
 
-      <div className="grid grid-cols-1 gap-6">
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-end justify-between mb-2">
-              <p className="text-xs text-muted-foreground">
-                Department People (HOD view)
-              </p>
-              <Button
-                onClick={() => exportDeptPeople(deptPeople)}
-                variant="secondary"
-              >
-                Export XLSX
-              </Button>
-            </div>
-            <div className="overflow-auto rounded-md border">
-              <table className="min-w-[1000px] text-sm">
-                <thead className="bg-muted/40 text-left">
-                  <tr>
-                    <th className="p-2">Department</th>
-                    <th className="p-2">HOD (rough)</th>
-                    <th className="p-2">People Count</th>
-                    <th className="p-2">People</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y">
-                  {deptPeople.map((d) => {
-                    const preview = d.names.slice(0, 10);
-                    const remaining = Math.max(
-                      0,
-                      d.names.length - preview.length,
-                    );
-                    return (
-                      <tr key={d.department} className="hover:bg-muted/20">
-                        <td className="p-2 text-muted-foreground">
-                          {d.department}
-                        </td>
-                        <td className="p-2">{d.hod || "—"}</td>
-                        <td className="p-2">{d.count}</td>
-                        <td className="p-2">
-                          {preview.join(", ")}
-                          {remaining ? `, +${remaining} more` : ""}
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
     </div>
   );
 }
