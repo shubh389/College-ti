@@ -200,7 +200,11 @@ function toEmail(name: string, code: string) {
 }
 
 // Normalizer shared across components
-const normName = (s: string) => String(s ?? "").toLowerCase().replace(/\s+/g, " ").trim();
+const normName = (s: string) =>
+  String(s ?? "")
+    .toLowerCase()
+    .replace(/\s+/g, " ")
+    .trim();
 
 // Detailed punch row shape (from Excel)
 export type PunchRow = {
@@ -459,7 +463,13 @@ function AttendanceTable({ records }: { records: AttendanceRecord[] }) {
   );
 }
 
-function FacultyCard({ faculty, rows }: { faculty: FacultyMember; rows: PunchRow[] }) {
+function FacultyCard({
+  faculty,
+  rows,
+}: {
+  faculty: FacultyMember;
+  rows: PunchRow[];
+}) {
   const [open, setOpen] = useState(false);
   return (
     <Card className="group overflow-hidden hover:shadow-brand">
@@ -561,7 +571,12 @@ function HODCard({
                   onClick={() => setHodOpen((v) => !v)}
                   className="rounded-full bg-red-50 hover:bg-red-100 border border-red-200"
                 >
-                  <Plus className={cn("h-5 w-5 text-red-600 transition-transform", hodOpen && "rotate-45")} />
+                  <Plus
+                    className={cn(
+                      "h-5 w-5 text-red-600 transition-transform",
+                      hodOpen && "rotate-45",
+                    )}
+                  />
                 </Button>
               </div>
               {hodOpen && <AttendanceDetailTable rows={getRows(hod.name)} />}

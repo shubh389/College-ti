@@ -673,7 +673,9 @@ export default function Attendance() {
       <div className="grid grid-cols-1 gap-6">
         <Card>
           <CardContent className="p-4">
-            <p className="text-xs text-muted-foreground mb-2">Duration & CL Summary</p>
+            <p className="text-xs text-muted-foreground mb-2">
+              Duration & CL Summary
+            </p>
             {(() => {
               const f = computeDuration(filteredPunches);
               const hodAvgMinutes = Math.max(
@@ -726,7 +728,6 @@ export default function Attendance() {
           </CardContent>
         </Card>
       </div>
-
     </div>
   );
 }
