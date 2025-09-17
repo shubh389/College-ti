@@ -199,6 +199,95 @@ function toEmail(name: string, code: string) {
   return `${handle}@${code.toLowerCase()}.tint.edu`;
 }
 
+// Normalizer shared across components
+const normName = (s: string) =>
+  String(s ?? "")
+    .toLowerCase()
+    .replace(/\s+/g, " ")
+    .trim();
+
+// Detailed punch row shape (from Excel)
+export type PunchRow = {
+  cardId: string;
+  empId: string;
+  name: string;
+  inDate: string;
+  inTime: string;
+  outDate: string;
+  outTime: string;
+  department: string;
+  college: string;
+};
+
+function findKey(obj: any, regex: RegExp, fallbackKeys: string[] = []) {
+  const keys = Object.keys(obj);
+  const found = keys.find((k) => regex.test(k.toLowerCase()));
+  if (found) return found;
+  return (
+    fallbackKeys.find((f) => keys.some((k) => normName(k) === normName(f))) ??
+    ""
+  );
+}
+function parseDate(v: any): string {
+  if (v instanceof Date) return v.toISOString().slice(0, 10);
+  const s = String(v ?? "").trim();
+  if (!s) return "";
+  const d = new Date(s);
+  if (!isNaN(d.getTime())) return d.toISOString().slice(0, 10);
+  const m = s.match(/(\d{1,2})[\/-](\d{1,2})[\/-](\d{2,4})/);
+  if (m) {
+    const [_, dd, mm, yyyy] = m as any;
+    const year = Number(String(yyyy).length === 2 ? `20${yyyy}` : yyyy);
+    const dt = new Date(year, Number(mm) - 1, Number(dd));
+    return dt.toISOString().slice(0, 10);
+  }
+  return "";
+}
+function parseTime(v: any): string {
+  const s = String(v ?? "").trim();
+  if (!s) return "";
+  const m = s.match(/(\d{1,2}):(\d{2})/);
+  if (m) return `${m[1].padStart(2, "0")}:${m[2]}`;
+  return "";
+}
+
+function AttendanceDetailTable({ rows }: { rows: PunchRow[] }) {
+  return (
+    <div className="overflow-auto rounded-md border">
+      <table className="w-full min-w-[1100px] text-sm">
+        <thead className="bg-muted/40 text-left">
+          <tr>
+            <th className="p-2">Card Id</th>
+            <th className="p-2">Employee ID</th>
+            <th className="p-2">Employee Name</th>
+            <th className="p-2">In Date</th>
+            <th className="p-2">In Time</th>
+            <th className="p-2">Out Date</th>
+            <th className="p-2">Out Time</th>
+            <th className="p-2">Department</th>
+            <th className="p-2">College</th>
+          </tr>
+        </thead>
+        <tbody className="divide-y">
+          {rows.map((r, i) => (
+            <tr key={`${r.empId}-${i}`} className="hover:bg-muted/20">
+              <td className="p-2 text-muted-foreground">{r.cardId}</td>
+              <td className="p-2">{r.empId}</td>
+              <td className="p-2">{r.name}</td>
+              <td className="p-2">{r.inDate}</td>
+              <td className="p-2">{r.inTime}</td>
+              <td className="p-2">{r.outDate}</td>
+              <td className="p-2">{r.outTime}</td>
+              <td className="p-2">{r.department}</td>
+              <td className="p-2">{r.college}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
 function parseProvidedData(raw: string): Department[] {
   const entries = raw
     .replace(/\s+/g, " ")
@@ -374,7 +463,13 @@ function AttendanceTable({ records }: { records: AttendanceRecord[] }) {
   );
 }
 
-function FacultyCard({ faculty }: { faculty: FacultyMember }) {
+function FacultyCard({
+  faculty,
+  rows,
+}: {
+  faculty: FacultyMember;
+  rows: PunchRow[];
+}) {
   const [open, setOpen] = useState(false);
   return (
     <Card className="group overflow-hidden hover:shadow-brand">
@@ -409,9 +504,9 @@ function FacultyCard({ faculty }: { faculty: FacultyMember }) {
           <div className="mt-4 space-y-3">
             <div className="flex items-center gap-2 text-xs text-muted-foreground">
               <CalendarDays className="h-4 w-4" />
-              Faculty Attendance (14 days)
+              Attendance detail
             </div>
-            <AttendanceTable records={faculty.attendance} />
+            <AttendanceDetailTable rows={rows} />
           </div>
         )}
       </CardContent>
@@ -421,12 +516,13 @@ function FacultyCard({ faculty }: { faculty: FacultyMember }) {
 
 function HODCard({
   hod,
-  defaultOpen = false,
+  getRows,
 }: {
   hod: HOD;
-  defaultOpen?: boolean;
+  getRows: (name: string) => PunchRow[];
 }) {
-  const [open, setOpen] = useState(!!defaultOpen);
+  const [open, setOpen] = useState(false);
+  const [hodOpen, setHodOpen] = useState(false);
   return (
     <Card className="overflow-hidden hover:shadow-brand">
       <CardContent className="p-4">
@@ -461,6 +557,30 @@ function HODCard({
         </div>
         {open && (
           <div className="mt-4">
+            <div className="space-y-3 mb-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                  <CalendarDays className="h-4 w-4" />
+                  HOD Attendance detail
+                </div>
+                <Button
+                  variant="secondary"
+                  size="icon"
+                  aria-expanded={hodOpen}
+                  aria-label={hodOpen ? "Hide attendance" : "Show attendance"}
+                  onClick={() => setHodOpen((v) => !v)}
+                  className="rounded-full bg-red-50 hover:bg-red-100 border border-red-200"
+                >
+                  <Plus
+                    className={cn(
+                      "h-5 w-5 text-red-600 transition-transform",
+                      hodOpen && "rotate-45",
+                    )}
+                  />
+                </Button>
+              </div>
+              {hodOpen && <AttendanceDetailTable rows={getRows(hod.name)} />}
+            </div>
             <SectionHeader
               icon={UserRound}
               title="Faculty"
@@ -468,7 +588,7 @@ function HODCard({
             />
             <div className="space-y-3">
               {hod.faculties.map((f) => (
-                <FacultyCard key={f.id} faculty={f} />
+                <FacultyCard key={f.id} faculty={f} rows={getRows(f.name)} />
               ))}
             </div>
           </div>
@@ -483,15 +603,15 @@ function DepartmentCard({
   open,
   onOpenChange,
   selected,
-  defaultOpen,
+  getRows,
 }: {
   dept: Department;
   open?: boolean;
   onOpenChange?: (open: boolean) => void;
   selected?: boolean;
-  defaultOpen?: boolean;
+  getRows: (name: string) => PunchRow[];
 }) {
-  const [internalOpen, setInternalOpen] = useState(!!defaultOpen);
+  const [internalOpen, setInternalOpen] = useState(false);
   const isOpen = open ?? internalOpen;
   const toggle = () =>
     onOpenChange ? onOpenChange(!isOpen) : setInternalOpen((v) => !v);
@@ -557,7 +677,7 @@ function DepartmentCard({
             />
             <div className="space-y-3">
               {dept.hods.map((h) => (
-                <HODCard key={h.id} hod={h} defaultOpen />
+                <HODCard key={h.id} hod={h} getRows={getRows} />
               ))}
             </div>
           </div>
@@ -571,17 +691,28 @@ export default function PrincipalDashboard() {
   const [departments, setDepartments] = useState<Department[]>(() =>
     parseProvidedData(PROVIDED_STAFF_RAW),
   );
-  const [selectedDeptId, setSelectedDeptId] = useState<string>(
-    departments[0]?.id ?? "",
-  );
+  const [selectedDeptId, setSelectedDeptId] = useState<string>("");
   const filtered = useMemo(() => {
     const found = departments.find((d) => d.id === selectedDeptId);
     return found ? [found] : departments;
   }, [departments, selectedDeptId]);
 
+  const [punchRows, setPunchRows] = useState<PunchRow[]>([]);
+  const rowsByName = useMemo(() => {
+    const m = new Map<string, PunchRow[]>();
+    for (const r of punchRows) {
+      const k = normName(r.name);
+      const arr = m.get(k) ?? [];
+      arr.push(r);
+      m.set(k, arr);
+    }
+    return m;
+  }, [punchRows]);
+  const getRows = (name: string) => rowsByName.get(normName(name)) ?? [];
+
   useEffect(() => {
     const EXCEL_URL =
-      "https://cdn.builder.io/o/assets%2Fc2eca9bb69a4489eadc6428a9e2e2956%2Ff3c4eb3b9f774518ac86dbf0d21d35f3?alt=media&token=8b1bbe91-5c07-4d39-94a2-f3c0f919ea32&apiKey=c2eca9bb69a4489eadc6428a9e2e2956";
+      "https://cdn.builder.io/o/assets%2F0d7360767e284db5a397928f0c050cd5%2F361c22ddd0a145e0ad02f5734a898345?alt=media&token=e24a98ae-3bf6-4d40-a37d-e48654f24204&apiKey=0d7360767e284db5a397928f0c050cd5";
     (async () => {
       try {
         const buf = await fetch(EXCEL_URL).then((r) => {
@@ -616,7 +747,6 @@ export default function PrincipalDashboard() {
         const rows: any[] = xlsxModule.utils.sheet_to_json(sheet, {
           defval: "",
         });
-        const norm = (s: string) => s.toLowerCase().replace(/\s+/g, " ").trim();
         const byName = new Map<string, any>();
         for (const row of rows) {
           const nameKey =
@@ -626,7 +756,7 @@ export default function PrincipalDashboard() {
           if (!nameKey) continue;
           const name = String(row[nameKey] ?? "");
           if (!name) continue;
-          byName.set(norm(name), row);
+          byName.set(normName(name), row);
         }
         const presentKey = (keys: string[]) =>
           keys.find((k) => /\b(present|^p$)\b/i.test(k));
@@ -635,13 +765,42 @@ export default function PrincipalDashboard() {
         const leaveKey = (keys: string[]) =>
           keys.find((k) => /\b(leave|^l$)\b/i.test(k));
 
+        // Map detailed punches for per-person table
+        const mapped: PunchRow[] = rows.map((row) => {
+          const cardKey = findKey(row, /card\s*id|card\s*no|card\s*number/);
+          const empKey = findKey(row, /employee\s*id|emp\s*id|id$/);
+          const nameKey = findKey(row, /employee\s*name|name/);
+          const deptKey = findKey(row, /department|dept/);
+          const collegeKey = findKey(row, /college|institute|org/);
+          const inDateKey = findKey(row, /in\s*date|date\s*in|entry\s*date/);
+          const inTimeKey = findKey(row, /in\s*time|time\s*in|entry\s*time/);
+          const outDateKey = findKey(row, /out\s*date|date\s*out|exit\s*date/);
+          const outTimeKey = findKey(row, /out\s*time|time\s*out|exit\s*time/);
+          const inDate = parseDate(row[inDateKey]);
+          const outDate = parseDate(row[outDateKey]);
+          const inTime = parseTime(row[inTimeKey]);
+          const outTime = parseTime(row[outTimeKey]);
+          return {
+            cardId: String(row[cardKey] ?? ""),
+            empId: String(row[empKey] ?? ""),
+            name: String(row[nameKey] ?? ""),
+            inDate,
+            inTime,
+            outDate,
+            outTime,
+            department: String(row[deptKey] ?? ""),
+            college: String(row[collegeKey] ?? ""),
+          } as PunchRow;
+        });
+        setPunchRows(mapped.filter((m) => m.name));
+
         setDepartments((prev) =>
           prev.map((dept) => ({
             ...dept,
             hods: dept.hods.map((h) => ({
               ...h,
               faculties: h.faculties.map((f) => {
-                const row = byName.get(norm(f.name));
+                const row = byName.get(normName(f.name));
                 if (!row) return f;
                 const keys = Object.keys(row);
                 const pk = presentKey(keys);
@@ -685,6 +844,7 @@ export default function PrincipalDashboard() {
               onChange={(e) => setSelectedDeptId(e.target.value)}
               className="appearance-none text-sm pr-9 pl-3 py-2 rounded-md border bg-white shadow-sm focus:outline-none focus:ring-2 focus:ring-red-500"
             >
+              <option value="">All Departments</option>
               {departments.map((d) => (
                 <option key={d.id} value={d.id}>
                   {d.code} — {d.name}
@@ -741,7 +901,7 @@ export default function PrincipalDashboard() {
               key={dept.id}
               dept={dept}
               selected={isSelected}
-              defaultOpen={isSelected}
+              getRows={getRows}
             />
           );
         })}

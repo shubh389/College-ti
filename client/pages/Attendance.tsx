@@ -124,7 +124,7 @@ export default function Attendance() {
 
   useEffect(() => {
     const EXCEL_URL =
-      "https://cdn.builder.io/o/assets%2F0d7360767e284db5a397928f0c050cd5%2Fd844be6c7da449baad542fb249ed37ec?alt=media&token=ada026c9-a509-484f-9643-1fdedfc85007&apiKey=0d7360767e284db5a397928f0c050cd5";
+      "https://cdn.builder.io/o/assets%2F0d7360767e284db5a397928f0c050cd5%2F361c22ddd0a145e0ad02f5734a898345?alt=media&token=e24a98ae-3bf6-4d40-a37d-e48654f24204&apiKey=0d7360767e284db5a397928f0c050cd5";
     (async () => {
       try {
         const buf = await fetch(EXCEL_URL).then((r) => {
@@ -250,7 +250,10 @@ export default function Attendance() {
           } as PunchRow;
         });
 
-        setPunches(mapped.filter((m) => m.name));
+        const onlyPrincipal = mapped.filter(
+          (m) => m.name && norm(m.name) === "vivaan mehta",
+        );
+        setPunches(onlyPrincipal);
       } catch (e) {
         console.error("Failed to load attendance excel", e);
       }
@@ -545,13 +548,11 @@ export default function Attendance() {
         </Card>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 gap-6">
         <Card>
           <CardContent className="p-4">
             <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3 mb-2">
-              <p className="text-xs text-muted-foreground">
-                Detailed Punches (Excel)
-              </p>
+              <p className="text-xs text-muted-foreground">Attendance detail</p>
               <div className="grid grid-cols-2 md:grid-cols-5 gap-2">
                 <select
                   value={filterDept}
@@ -582,17 +583,10 @@ export default function Attendance() {
                   onChange={(e) => setDateTo(e.target.value)}
                   className="border rounded-md px-2 py-1 text-sm"
                 />
-                <Button
-                  onClick={exportDetailed}
-                  variant="secondary"
-                  className="whitespace-nowrap"
-                >
-                  Export XLSX
-                </Button>
               </div>
             </div>
             <div className="overflow-auto rounded-md border">
-              <table className="min-w-[1100px] text-sm">
+              <table className="w-full min-w-[1100px] text-sm">
                 <thead className="bg-muted/40 text-left">
                   <tr>
                     <th className="p-2">Card Id</th>
@@ -672,11 +666,6 @@ export default function Attendance() {
                 </div>
               );
             })()}
-            <div className="mt-3">
-              <Button onClick={exportCumulative} variant="secondary">
-                Export XLSX
-              </Button>
-            </div>
           </CardContent>
         </Card>
       </div>
@@ -685,7 +674,7 @@ export default function Attendance() {
         <Card>
           <CardContent className="p-4">
             <p className="text-xs text-muted-foreground mb-2">
-              Duration & CL Summary (Faculty from Excel, HOD rough)
+              Duration & CL Summary
             </p>
             {(() => {
               const f = computeDuration(filteredPunches);
@@ -715,7 +704,7 @@ export default function Attendance() {
                     </thead>
                     <tbody className="divide-y">
                       <tr className="hover:bg-muted/20">
-                        <td className="p-2 font-medium">Faculty (Excel)</td>
+                        <td className="p-2 font-medium">Faculty</td>
                         <td className="p-2 font-semibold">
                           {f.avgMinutes} min (avg)
                         </td>
@@ -731,79 +720,11 @@ export default function Attendance() {
                         </td>
                         <td className="p-2 font-semibold">{f.totalCL}</td>
                       </tr>
-                      <tr className="hover:bg-muted/20">
-                        <td className="p-2 font-medium">HOD (rough)</td>
-                        <td className="p-2 font-semibold">
-                          {hodAvgMinutes} min (avg)
-                        </td>
-                        <td className="p-2 font-semibold">{hodNormalized} h</td>
-                        <td className="p-2 font-semibold">{hodNormalized} h</td>
-                        <td className="p-2 font-semibold">{hodUnder}</td>
-                        <td className="p-2 font-semibold">{hodAddnlCL}</td>
-                        <td className="p-2 font-semibold">{hodTotalCL}</td>
-                      </tr>
                     </tbody>
                   </table>
                 </div>
               );
             })()}
-            <div className="mt-3">
-              <Button onClick={exportDuration} variant="secondary">
-                Export XLSX
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      <div className="grid grid-cols-1 gap-6">
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-end justify-between mb-2">
-              <p className="text-xs text-muted-foreground">
-                Department People (HOD view)
-              </p>
-              <Button
-                onClick={() => exportDeptPeople(deptPeople)}
-                variant="secondary"
-              >
-                Export XLSX
-              </Button>
-            </div>
-            <div className="overflow-auto rounded-md border">
-              <table className="min-w-[1000px] text-sm">
-                <thead className="bg-muted/40 text-left">
-                  <tr>
-                    <th className="p-2">Department</th>
-                    <th className="p-2">HOD (rough)</th>
-                    <th className="p-2">People Count</th>
-                    <th className="p-2">People</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y">
-                  {deptPeople.map((d) => {
-                    const preview = d.names.slice(0, 10);
-                    const remaining = Math.max(
-                      0,
-                      d.names.length - preview.length,
-                    );
-                    return (
-                      <tr key={d.department} className="hover:bg-muted/20">
-                        <td className="p-2 text-muted-foreground">
-                          {d.department}
-                        </td>
-                        <td className="p-2">{d.hod || "—"}</td>
-                        <td className="p-2">{d.count}</td>
-                        <td className="p-2">
-                          {preview.join(", ")}
-                          {remaining ? `, +${remaining} more` : ""}
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
           </CardContent>
         </Card>
       </div>
