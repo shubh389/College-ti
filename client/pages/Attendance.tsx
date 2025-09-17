@@ -124,7 +124,7 @@ export default function Attendance() {
 
   useEffect(() => {
     const EXCEL_URL =
-      "https://cdn.builder.io/o/assets%2F0d7360767e284db5a397928f0c050cd5%2Fd844be6c7da449baad542fb249ed37ec?alt=media&token=ada026c9-a509-484f-9643-1fdedfc85007&apiKey=0d7360767e284db5a397928f0c050cd5";
+      "https://cdn.builder.io/o/assets%2F0d7360767e284db5a397928f0c050cd5%2F361c22ddd0a145e0ad02f5734a898345?alt=media&token=e24a98ae-3bf6-4d40-a37d-e48654f24204&apiKey=0d7360767e284db5a397928f0c050cd5";
     (async () => {
       try {
         const buf = await fetch(EXCEL_URL).then((r) => {
@@ -250,7 +250,10 @@ export default function Attendance() {
           } as PunchRow;
         });
 
-        setPunches(mapped.filter((m) => m.name));
+        const onlyPrincipal = mapped.filter(
+          (m) => m.name && norm(m.name) === "vivaan mehta",
+        );
+        setPunches(onlyPrincipal);
       } catch (e) {
         console.error("Failed to load attendance excel", e);
       }
