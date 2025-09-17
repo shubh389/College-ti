@@ -548,8 +548,8 @@ export default function Attendance() {
         </Card>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <Card>
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <Card className="lg:col-span-2">
           <CardContent className="p-4">
             <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3 mb-2">
               <p className="text-xs text-muted-foreground">
